@@ -76,3 +76,6 @@ under that same run's `correlation_only/` directory, links the completed
 ALFA-K inputs and KFL sample results, and leaves the original strict-selection
 artifacts intact. The branch uses `xxlarge` and a 12-hour limit for its Slurm
 jobs. `selection_comparison.tsv` records both methods for all 12 pairs.
+The high_cn_8/P7 MSR threshold edge case is documented in
+[`MSR_EDGE_CASE.md`](MSR_EDGE_CASE.md); its targeted recovery uses
+`bash scripts/submit_msr_edge_case.sh` after patient-level MSR completes.

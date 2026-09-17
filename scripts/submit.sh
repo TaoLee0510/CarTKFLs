@@ -114,6 +114,10 @@ if [[ -n "${SLURM_JOB_ID:-}" ]]; then
       : "${MSR_CACHE:?MSR_CACHE required for MSR diagnostic}"
       container_rscript "${PROJECT}/scripts/diagnose_msr_thresholds.R" "${MSR_CACHE}"
       ;;
+    msr_reduce_first_minimum)
+      container_rscript "${PROJECT}/scripts/msr_reduce_first_minimum.R" \
+        "${CONFIG_PATH}" "${RUN_DIR}"
+      ;;
     *) echo "Unknown RUN_STAGE=${RUN_STAGE}" >&2; exit 1 ;;
   esac
   exit 0
