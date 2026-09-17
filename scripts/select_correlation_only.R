@@ -23,7 +23,8 @@ if (!file.exists(file.path(source_dir, "fit_audit.tsv"))) {
 link_source <- function(source, destination) {
   if (!file.exists(source)) stop("Missing source: ", source)
   dir.create(dirname(destination), recursive = TRUE, showWarnings = FALSE)
-  if (file.exists(destination) || nzchar(Sys.readlink(destination))) {
+  link_target <- Sys.readlink(destination)
+  if (file.exists(destination) || (!is.na(link_target) && nzchar(link_target))) {
     if (!identical(normalizePath(destination), normalizePath(source))) {
       stop("Existing link points elsewhere: ", destination)
     }
