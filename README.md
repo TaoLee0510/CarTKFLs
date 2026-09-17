@@ -65,3 +65,14 @@ copied before any recovery work. Run `scripts/verify_container_start_recovery.py
 after the recovery arrays finish and before submitting a fresh fit audit in
 the same run directory; that audit
 continues into KFL selection and downstream analysis if it passes.
+
+## Temporary Pearson-only downstream branch
+
+For the existing `20260917_f93b2d2_uncapped_f4633d2` run, the alternative
+selection requested after the strict KFL screen is documented in
+[`SELECTION_METHOD.md`](SELECTION_METHOD.md). Submit its isolated downstream
+branch with `bash scripts/submit_correlation_downstream.sh` on RED. It writes
+under that same run's `correlation_only/` directory, links the completed
+ALFA-K inputs and KFL sample results, and leaves the original strict-selection
+artifacts intact. The branch uses `xxlarge` and a 12-hour limit for its Slurm
+jobs. `selection_comparison.tsv` records both methods for all 12 pairs.

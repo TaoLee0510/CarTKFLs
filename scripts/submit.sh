@@ -105,6 +105,11 @@ if [[ -n "${SLURM_JOB_ID:-}" ]]; then
       container_rscript "${PROJECT}/scripts/summarize_selection.R" \
         "${CONFIG_PATH}" "${RUN_DIR}"
       ;;
+    select_correlation)
+      : "${SOURCE_RUN_DIR:?SOURCE_RUN_DIR required for correlation selection}"
+      container_rscript "${PROJECT}/scripts/select_correlation_only.R" \
+        "${CONFIG_PATH}" "${SOURCE_RUN_DIR}" "${RUN_DIR}"
+      ;;
     *) echo "Unknown RUN_STAGE=${RUN_STAGE}" >&2; exit 1 ;;
   esac
   exit 0
