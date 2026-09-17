@@ -35,5 +35,16 @@ visible in task status and are not automatically retried. The final selection
 uses KFL accuracy/stability with `selection_mode=kfl_only`; no clinical
 outcome, ABM, or expression annotation is used to select parameters.
 
+The pinned alfakR dev2 `xval()` has a confirmed result-column naming defect:
+some Krig predictions occupy the second column under a name other than
+`est_f`, while the package reads `est_f` by name. `scripts/xval_compat.R`
+retains the installed function body and changes only that column lookup to
+position 2, failing if the expected function body changes. When ALFA-K has
+already written a valid bootstrap, landscape, and posterior but failed at this
+lookup, `fit_one.R` finishes cross-validation from the saved bootstrap. The
+repair scripts do the same for earlier failed tasks without rerunning fitting,
+and preserve each original status in `*.before_xval_repair.tsv`. The dev2
+`xval_data` fields are extracted directly into PANcanKFLs' patient-fit format.
+
 Outputs beneath `results/` are ignored by Git. Inspect `submissions.tsv`,
 `fit_audit.tsv`, `selection_summary.tsv`, and Slurm accounting for progress.

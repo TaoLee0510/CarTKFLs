@@ -2,6 +2,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 4L) stop("Usage: fit_one.R CONFIG RUN_DIR TASK_FILE ROW_NUMBER")
 script <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[1])
 source(file.path(dirname(normalizePath(script)), "common.R"))
+source(file.path(dirname(normalizePath(script)), "xval_compat.R"))
 cfg <- read_config(args[[1]])
 run_dir <- args[[2]]
 tasks <- utils::read.delim(args[[3]], stringsAsFactors = FALSE, check.names = FALSE)
@@ -45,15 +46,35 @@ dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 set.seed(20260917L + task_id)
 state <- ""
 failure <- ""
+note <- ""
+raw3 <- function() {
+  paths <- file.path(outdir, c("bootstrap_res.Rds", "landscape.Rds",
+                               "landscape_posterior_samples.Rds"))
+  all(file.exists(paths)) && all(file.info(paths)$size > 0)
+}
 tryCatch({
   if (!validate_raw(outdir)) {
-    alfakR::alfak(
-      yi = verified$yi, outdir = outdir, passage_times = NULL,
-      minobs = minobs, nboot = as.integer(cfg$alfak$nboot),
-      n0 = as.numeric(cfg$alfak$n0), nb = as.numeric(cfg$alfak$nb),
-      pm = pm, correct_efflux = isTRUE(cfg$alfak$correct_efflux),
-      allow_noninteger_counts = FALSE
-    )
+    if (!raw3()) {
+      fit_error <- tryCatch({
+        alfakR::alfak(
+          yi = verified$yi, outdir = outdir, passage_times = NULL,
+          minobs = minobs, nboot = as.integer(cfg$alfak$nboot),
+          n0 = as.numeric(cfg$alfak$n0), nb = as.numeric(cfg$alfak$nb),
+          pm = pm, correct_efflux = isTRUE(cfg$alfak$correct_efflux),
+          allow_noninteger_counts = FALSE
+        )
+        NULL
+      }, error = function(e) e)
+      if (!is.null(fit_error) &&
+          !(raw3() && grepl("subscript out of bounds", conditionMessage(fit_error),
+                            fixed = TRUE))) stop(fit_error)
+    }
+    if (raw3() && !file.exists(file.path(outdir, "xval.Rds"))) {
+      xval <- xval_dev2_compat(readRDS(file.path(outdir, "bootstrap_res.Rds")))
+      atomic_rds(xval, file.path(outdir, "xval.Rds"))
+      note <- "xval recovered from the existing alfakR bootstrap using audited dev2 column fix"
+      writeLines(note, file.path(outdir, "xval_recovered.txt"))
+    }
   }
   if (!validate_raw(outdir)) stop("ALFA-K did not produce a valid raw quartet")
   extract_patient_fit(outdir, patient, minobs)
@@ -71,7 +92,7 @@ if (state != "COMPLETE") {
     paste0("message=", failure)
   ), file.path(outdir, "alfak_failed.txt"))
 }
-write_status(state, failure)
+write_status(state, if (state == "COMPLETE") note else failure)
 cat(sprintf("task=%d patient=%s high_cn=%d pm=%s minobs=%d state=%s %s\n",
             task_id, patient, high_cn, pm_label(pm), minobs, state, failure))
 if (state == "MODEL_ERROR") quit(save = "no", status = 1L)

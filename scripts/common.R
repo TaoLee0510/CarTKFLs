@@ -118,12 +118,24 @@ extract_patient_fit <- function(outdir, patient, minobs) {
   landscape <- readRDS(file.path(outdir, "landscape.Rds"))
   xval <- readRDS(file.path(outdir, "xval.Rds"))
   fit_col <- if ("mean" %in% names(landscape)) "mean" else "median"
-  if (!fit_col %in% names(landscape) || is.null(xval$tmp)) {
+  if (!fit_col %in% names(landscape)) stop("No fitness column: ", outdir)
+  if (is.data.frame(xval$xval_data) &&
+      all(c("k", "observation", "prediction") %in% names(xval$xval_data))) {
+    xv <- xval$xval_data
+    if (!nrow(xv) || anyNA(xv$k) || anyDuplicated(xv$k)) {
+      stop("No unique cross-validation karyotypes: ", outdir)
+    }
+    # dev2 returns the observed and predicted columns explicitly. PANcanKFLs
+    # names them f_est and f_xv, respectively, in its historical flat fit.
+    f_mat <- data.frame(f_est = as.numeric(xv$observation),
+                        f_xv = as.numeric(xv$prediction), row.names = as.character(xv$k))
+  } else if (!is.null(xval$tmp)) {
+    f_mat <- as.data.frame(xval$tmp)
+    if (ncol(f_mat) < 2L) stop("Cross-validation has fewer than two columns: ", outdir)
+    names(f_mat)[1:2] <- c("f_est", "f_xv")
+  } else {
     stop("No evaluable cross-validation/fitness data: ", outdir)
   }
-  f_mat <- as.data.frame(xval$tmp)
-  if (ncol(f_mat) < 2L) stop("Cross-validation has fewer than two columns: ", outdir)
-  names(f_mat)[1:2] <- c("f_est", "f_xv")
   fq <- if ("fq" %in% names(landscape)) {
     if (is.logical(landscape$fq)) landscape$fq else
       tolower(as.character(landscape$fq)) %in% c("true", "t", "1")

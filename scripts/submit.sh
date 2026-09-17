@@ -54,6 +54,15 @@ if [[ -n "${SLURM_JOB_ID:-}" ]]; then
       container_rscript "${PROJECT}/scripts/fit_one.R" \
         "${CONFIG_PATH}" "${RUN_DIR}" "${TASK_FILE}" "${task_row}"
       ;;
+    repair)
+      task_row=$((TASK_OFFSET + SLURM_ARRAY_TASK_ID))
+      container_rscript "${PROJECT}/scripts/repair_xval_one.R" \
+        "${CONFIG_PATH}" "${RUN_DIR}" "${TASK_FILE}" "${task_row}"
+      ;;
+    build_repair)
+      container_rscript "${PROJECT}/scripts/build_repair_manifest.R" \
+        "${CONFIG_PATH}" "${RUN_DIR}"
+      ;;
     audit)
       container_rscript "${PROJECT}/scripts/audit_fit.R" "${CONFIG_PATH}" "${RUN_DIR}"
       manifest="${RUN_DIR}/manifests/kfl_samples.tsv"
