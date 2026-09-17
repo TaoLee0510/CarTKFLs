@@ -1,5 +1,42 @@
 # Penn CarT ALFA-K analysis
 
+## GSE210079 multiple myeloma
+
+The separate GSE210079 workflow reads final Numbat matrices for P16, P32,
+and P33 from `/share/lab_crd/CarTData/Numbat/GSE210079`. It uses cells marked
+`tumor` by Numbat, follows PANcanKFLs' largest-segment-per-chromosome
+conversion, excludes the all-diploid karyotype, and counts integer karyotypes
+at each sampled time point. A per-cell ledger, source hashes, input counts,
+and grid-support table are written for every run. P33's Numbat tumor calls
+have independent cell-identity uncertainty and should be interpreted as
+Numbat-assigned cells, not independently validated myeloma cells.
+
+The input clock is in days with `dt=1`: pretreatment 0, day 28 = 28, and
+month 3 = a **nominal 90 days**. GSE210079 metadata has relative labels but
+no patient collection dates. This assumption is recorded in the run config
+and provenance.
+
+After the code is committed, pushed, and pulled into the HPC checkout, submit
+with:
+
+```bash
+bash scripts/multiple_myeloma/submit.sh
+```
+
+Results are isolated under
+`/share/lab_crd/taoli/Project/CarTKFLs/multiple_myeloma/runs/<run_id>/`.
+The preflight runs as a Slurm job, verifies the pinned PANcanKFLs commit and
+alfakR dev2 SIF, and builds inputs plus a viable `pm × min_obs` task manifest.
+Fit arrays use `xxlarge`, 12 hours per task, and memory tiers in
+`config/gse210079_multiple_myeloma.yaml`. The fit audit launches PANcanKFLs'
+KFL accuracy/stability selection and compatible downstream jobs. The current
+alfakR `xval.Rds` is extracted directly; there is no rebuild stage.
+
+`submissions.tsv`, `fit_audit.tsv`, `fit_sample_summary.tsv`,
+`selection_coverage.tsv`, and Slurm accounting are the progress records.
+Unsupported parameter values, no-CV results, and patients with no evaluable
+fit remain explicit. Failed jobs are never automatically resubmitted.
+
 This repository runs the four paired-resection GSE296419 patients (P1, P4,
 P7, P13) through ALFA-K, outcome-blind PM/MINOBS selection, and the compatible
 PANcanKFLs downstream analysis. `high_cn_6` is primary; `high_cn_5` and

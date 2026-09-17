@@ -1,0 +1,44 @@
+project_root: /share/lab_crd/taoli/Project/CarTKFLs
+data_root: /share/lab_crd/taoli/Project/CarTKFLs/multiple_myeloma
+run_scoped_data_root: true
+handoff_root: /share/lab_crd/CarTData/Numbat/GSE210079
+metadata_path: /share/lab_crd/CarTData/GSE210079/metadata/sample_metadata.tsv
+pan_repo: /share/lab_crd/taoli/Project/PANcanKFLs
+pan_commit: 8c189aa038599813870e6c8730b57768e91fd77d
+sif_path: /share/lab_crd/taoli/Docker/cancer_kfl_r44_hpc_amd64_alfakr_dev2_f93b2d2.sif
+sif_sha256: efadf2160799b8948a2514ffb6d62fa48de974c399b7cd3987809ece0f53a1e9
+alfakr_commit: f93b2d28550d8a39a9cfff22edf53cf4a50c875a
+cancer_type: MultipleMyeloma
+# GEO provides relative labels, not collection dates. 3mo=90 days is a
+# documented nominal interval; D28 is day 28 and pretreatment is day 0.
+time_unit: day
+month3_nominal_days: 90
+patients:
+  P16:
+    numbat_iteration: 3
+    timepoints:
+      Pre: {gsm: GSM6418430, sample_label: 16-pre, day: 0, tumor_cells: 1339}
+      D28: {gsm: GSM6418429, sample_label: 16-d28, day: 28, tumor_cells: 67}
+      3mo: {gsm: GSM6418428, sample_label: 16-3mo, day: 90, tumor_cells: 113}
+  P32:
+    numbat_iteration: 4
+    timepoints:
+      Pre: {gsm: GSM6459762, sample_label: 32-pre, day: 0, tumor_cells: 6027}
+      3mo: {gsm: GSM6459763, sample_label: 32-3mo, day: 90, tumor_cells: 4797}
+  P33:
+    numbat_iteration: 3
+    timepoints:
+      Pre: {gsm: GSM6459766, sample_label: 33-pre, day: 0, tumor_cells: 3113}
+      D28: {gsm: GSM6459767, sample_label: 33-d28, day: 28, tumor_cells: 7497}
+      3mo: {gsm: GSM6459769, sample_label: 33-3mo, day: 90, tumor_cells: 635}
+minobs: [5, 10, 20]
+pm_explicit: [0.000005, 0.000010]
+pm_sequence: {start: 0.000050, end: 0.012250, by: 0.000050}
+alfak: {n0: 100000, nb: 10000000, nboot: 500, correct_efflux: true}
+hpc:
+  qos: xxlarge
+  time: '12:00:00'
+  fit_mem:
+    P16: {MINOBS_5: 96G, MINOBS_10: 64G, MINOBS_20: 32G}
+    P32: {MINOBS_5: 32G, MINOBS_10: 24G, MINOBS_20: 16G}
+    P33: {MINOBS_5: 16G, MINOBS_10: 16G, MINOBS_20: 16G}
