@@ -58,6 +58,7 @@ The builder requires an exact `unknown userid 107865` container error,
 Slurm exit 127, a missing task status, and no saved fit output. It writes an
 evidence manifest and submits only matching original task rows with their
 original MINOBS memory request and no array throttle. The original audit is
-copied before any recovery work. Check every recovery job and its task status
-before submitting a fresh fit audit in the same run directory; that audit
+copied before any recovery work. Run `scripts/verify_container_start_recovery.py`
+after the recovery arrays finish and before submitting a fresh fit audit in
+the same run directory; that audit
 continues into KFL selection and downstream analysis if it passes.
