@@ -26,7 +26,10 @@ def rows(path):
 
 
 def command(*args):
-    return subprocess.run(args, check=True, text=True, capture_output=True).stdout
+    return subprocess.run(
+        args, check=True, universal_newlines=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    ).stdout
 
 
 def write_tsv(path, fields, records):
