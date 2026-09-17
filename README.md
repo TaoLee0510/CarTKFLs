@@ -48,3 +48,16 @@ format.
 
 Outputs beneath `results/` are ignored by Git. Inspect `submissions.tsv`,
 `fit_audit.tsv`, `selection_summary.tsv`, and Slurm accounting for progress.
+
+## Recovery of container startup failures
+
+For the uncapped `20260917_f93b2d2_uncapped_f4633d2` run only, after its three
+fit arrays and original audit are terminal, run
+`scripts/submit_container_start_recovery.sh` with that existing run directory.
+The builder requires an exact `unknown userid 107865` container error,
+Slurm exit 127, a missing task status, and no saved fit output. It writes an
+evidence manifest and submits only matching original task rows with their
+original MINOBS memory request and no array throttle. The original audit is
+copied before any recovery work. Check every recovery job and its task status
+before submitting a fresh fit audit in the same run directory; that audit
+continues into KFL selection and downstream analysis if it passes.
