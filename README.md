@@ -26,7 +26,8 @@ bash scripts/submit.sh
 The controller submits preflight as a Slurm job, waits for its result, and
 submits one fit task per patient, high-CN mapping, PM, and MINOBS combination.
 The fit arrays use `xxlarge`, 12 hours, one CPU, and separate memory requests
-of 48/16/8 GB for MINOBS 5/10/20. Each array has a concurrency cap of 32.
+of 48/16/8 GB for MINOBS 5/10/20. No per-array concurrency limit is set;
+Slurm schedules tasks according to available resources.
 The controller then submits a dependent audit and, if it passes, the KFL and
 downstream stages. `results/runs/<run_id>/submissions.tsv` records all job IDs.
 

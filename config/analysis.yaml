@@ -26,4 +26,3 @@ hpc:
   qos: xxlarge
   time: '12:00:00'
   fit_mem: {MINOBS_5: 48G, MINOBS_10: 16G, MINOBS_20: 8G}
-  fit_max_concurrent: 32

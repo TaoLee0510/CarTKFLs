@@ -69,7 +69,7 @@ if [[ -n "${SLURM_JOB_ID:-}" ]]; then
       manifest="${RUN_DIR}/manifests/kfl_samples.tsv"
       tasks=$(($(wc -l <"${manifest}") - 1))
       kfl_job=$(sbatch --parsable --job-name=CarTKFL \
-        --array="1-${tasks}%12" --ntasks=1 --cpus-per-task=4 --mem=32G \
+        --array="1-${tasks}" --ntasks=1 --cpus-per-task=4 --mem=32G \
         --qos="${QOS}" --time="${TIME_LIMIT}" \
         --output="${RUN_DIR}/logs/kfl_%A_%a.out" \
         --error="${RUN_DIR}/logs/kfl_%A_%a.err" \
@@ -151,7 +151,7 @@ for minobs in 5 10 20; do
     chunk=$((total - offset))
     ((chunk > max_chunk)) && chunk=${max_chunk}
     job=$(sbatch --parsable --job-name="CarTFit${minobs}" \
-      --array="1-${chunk}%32" --ntasks=1 --cpus-per-task=1 --mem="${mem}" \
+      --array="1-${chunk}" --ntasks=1 --cpus-per-task=1 --mem="${mem}" \
       --qos="${QOS}" --time="${TIME_LIMIT}" \
       --output="${RUN_DIR}/logs/fit${minobs}_%A_%a.out" \
       --error="${RUN_DIR}/logs/fit${minobs}_%A_%a.err" \

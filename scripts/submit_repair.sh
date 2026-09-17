@@ -58,7 +58,7 @@ while ((offset < total)); do
   chunk=$((total - offset))
   ((chunk > max_chunk)) && chunk=${max_chunk}
   job=$(sbatch --parsable --job-name=CarTXvalRepair \
-    --array="1-${chunk}%32" --ntasks=1 --cpus-per-task=1 --mem=8G \
+    --array="1-${chunk}" --ntasks=1 --cpus-per-task=1 --mem=8G \
     --qos="${QOS}" --time="${TIME_LIMIT}" \
     --output="${RUN_DIR}/logs/repair_%A_%a.out" \
     --error="${RUN_DIR}/logs/repair_%A_%a.err" \
