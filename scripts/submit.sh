@@ -122,7 +122,7 @@ record_submission preflight "${preflight_job}" "" 1 1 8G
 }
 
 max_array_size=$(scontrol show config 2>/dev/null | awk -F= \
-  '/^[[:space:]]*MaxArraySize[[:space:]]*=/ {gsub(/[[:space:]]/, "", $2); print $2; exit}')
+  '/^[[:space:]]*MaxArraySize[[:space:]]*=/ && !seen {gsub(/[[:space:]]/, "", $2); print $2; seen=1}')
 if [[ ! "${max_array_size}" =~ ^[0-9]+$ ]] || ((max_array_size <= 1)); then
   max_array_size=1001
 fi

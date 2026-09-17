@@ -114,5 +114,5 @@ provenance <- data.frame(
   stringsAsFactors = FALSE
 )
 atomic_tsv(provenance, file.path(run_dir, "provenance.tsv"))
-cat("Preflight passed: ", nrow(tasks), " fit tasks; ", nrow(input_rows),
+cat("Preflight passed: ", nrow(tasks), " fit tasks; ", length(input_rows),
     " staged input RDS; SIF and PAN SHA verified.\n", sep = "")
