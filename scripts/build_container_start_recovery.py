@@ -84,15 +84,19 @@ def main():
         raise RuntimeError("Original fit arrays or audit are still active")
 
     parent_states = {}
+    for line in command(
+        "sacct", "-X", "-j", ",".join(parent_ids), "--noheader",
+        "--parsable2", "-o", "JobIDRaw,State",
+    ).splitlines():
+        job_id, state, *_ = line.split("|")
+        if job_id in parent_ids:
+            parent_states[job_id] = state
     failed_start = {}
     for line in command(
         "sacct", "-X", "-j", ",".join(parent_ids), "--noheader",
         "--parsable2", "-o", "JobID,State,ExitCode,NodeList",
     ).splitlines():
         job_id, state, exit_code, node, *_ = line.split("|")
-        if job_id in parent_ids:
-            parent_states[job_id] = state
-            continue
         match = re.fullmatch(r"(\d+)_(\d+)", job_id)
         if match and match.group(1) in jobs and state == "FAILED" and exit_code == "127:0":
             failed_start[(match.group(1), int(match.group(2)))] = node
