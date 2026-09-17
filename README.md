@@ -48,6 +48,9 @@ format.
 
 Outputs beneath `results/` are ignored by Git. Inspect `submissions.tsv`,
 `fit_audit.tsv`, `selection_summary.tsv`, and Slurm accounting for progress.
+`selection_coverage.tsv` lists every patient/mapping pair and its count of
+significant KFL candidates. Pairs without a qualifying candidate are recorded
+in `selection_exclusions.tsv` and receive no selected PM/MINOBS tuple.
 
 ## Recovery of container startup failures
 
