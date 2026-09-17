@@ -53,12 +53,22 @@ if (minimum_index[["P7"]] != 1L ||
 }
 
 original_compute_ETs <- compute_ETs
+reference <- cache[["P1"]]
+reference_curve <- as.numeric(reference[1L, ])
+reference_p <- as.numeric(colnames(reference))
+reference_end <- which.min(reference_curve)
+threshold_names <- names(original_compute_ETs(
+  reference_p[seq_len(reference_end)], reference_curve[seq_len(reference_end)]
+))
+if (length(threshold_names) != 6L || anyNA(threshold_names)) {
+  stop("Cannot determine PANcanKFLs threshold column names")
+}
 compute_ETs <- function(p_seq, H_curve) {
   if (length(p_seq) == 1L && length(H_curve) == 1L &&
       is.finite(p_seq[[1]]) && is.finite(H_curve[[1]])) {
     # There is no pre-minimum interval from which to estimate a threshold.
-    return(c(ET_reg = NA_real_, ET_elbow = NA_real_, ET_cp = NA_real_,
-             ET_curve = NA_real_, ET_slope = NA_real_, ET_model = NA_real_))
+    return(stats::setNames(rep(NA_real_, length(threshold_names)),
+                           threshold_names))
   }
   original_compute_ETs(p_seq, H_curve)
 }
@@ -92,7 +102,7 @@ atomic_plot_pdf(plot_curve(result$ss_curve),
 thresholds <- utils::read.csv(file.path(output_dir, "ET_summary.csv"),
                               stringsAsFactors = FALSE)
 p7 <- thresholds[thresholds$sample == "P7", , drop = FALSE]
-et_columns <- c("ET_reg", "ET_elbow", "ET_cp", "ET_curve", "ET_slope", "ET_model")
+et_columns <- make.names(threshold_names, unique = TRUE)
 if (nrow(p7) != 1L || !all(et_columns %in% names(p7)) ||
     !all(is.na(p7[1L, et_columns]))) {
   stop("P7 first-minimum thresholds were not recorded as undefined")
