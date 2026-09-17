@@ -110,6 +110,10 @@ if [[ -n "${SLURM_JOB_ID:-}" ]]; then
       container_rscript "${PROJECT}/scripts/select_correlation_only.R" \
         "${CONFIG_PATH}" "${SOURCE_RUN_DIR}" "${RUN_DIR}"
       ;;
+    msr_diagnostic)
+      : "${MSR_CACHE:?MSR_CACHE required for MSR diagnostic}"
+      container_rscript "${PROJECT}/scripts/diagnose_msr_thresholds.R" "${MSR_CACHE}"
+      ;;
     *) echo "Unknown RUN_STAGE=${RUN_STAGE}" >&2; exit 1 ;;
   esac
   exit 0
