@@ -6,6 +6,16 @@ read_config <- function(path) {
   for (field in c("project_root", "data_root", "handoff_root", "pan_repo", "sif_path")) {
     if (is.null(cfg[[field]]) || !nzchar(cfg[[field]])) stop("Missing config field: ", field)
   }
+  if (isTRUE(cfg$run_scoped_data_root)) {
+    run_dir <- Sys.getenv("CART_RUN_DIR", unset = "")
+    if (!nzchar(run_dir)) stop("CART_RUN_DIR is required for run-scoped results")
+    results_root <- normalizePath(cfg$data_root, mustWork = TRUE)
+    run_dir <- normalizePath(run_dir, mustWork = TRUE)
+    if (!startsWith(run_dir, paste0(results_root, .Platform$file.sep))) {
+      stop("CART_RUN_DIR must be inside the configured results root")
+    }
+    cfg$data_root <- file.path(run_dir, "analysis")
+  }
   cfg
 }
 

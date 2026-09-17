@@ -9,9 +9,11 @@ numbers. Time zero is the first resection and the interval includes time before
 and after CAR-T infusion.
 
 The HPC result root is exactly
-`/share/lab_crd/taoli/Project/CarTKFLs/results`. Source RDS files remain
-immutable in the CarTData handoff. The workflow copies and hashes them into
-the result root for the PANcanKFLs consumer contract.
+`/share/lab_crd/taoli/Project/CarTKFLs/results`. Each new run writes its
+inputs, ALFA-K fits, and downstream results under
+`results/runs/<run_id>/analysis`, separate from the canceled run. Source RDS
+files remain immutable in the CarTData handoff. The workflow copies and hashes
+them into the run directory for the PANcanKFLs consumer contract.
 
 ## HPC run
 
@@ -35,16 +37,13 @@ visible in task status and are not automatically retried. The final selection
 uses KFL accuracy/stability with `selection_mode=kfl_only`; no clinical
 outcome, ABM, or expression annotation is used to select parameters.
 
-The pinned alfakR dev2 `xval()` has a confirmed result-column naming defect:
-some Krig predictions occupy the second column under a name other than
-`est_f`, while the package reads `est_f` by name. `scripts/xval_compat.R`
-retains the installed function body and changes only that column lookup to
-position 2, failing if the expected function body changes. When ALFA-K has
-already written a valid bootstrap, landscape, and posterior but failed at this
-lookup, `fit_one.R` finishes cross-validation from the saved bootstrap. The
-repair scripts do the same for earlier failed tasks without rerunning fitting,
-and preserve each original status in `*.before_xval_repair.tsv`. The dev2
-`xval_data` fields are extracted directly into PANcanKFLs' patient-fit format.
+The pinned alfakR dev2 image contains package commit `f93b2d2`, which fixes
+the `xval()` prediction-column naming defect. This run calls the installed
+package directly and fits every combination from the staged input; it does not
+recover or reuse output from the canceled run. The earlier compatibility and
+repair scripts remain in the repository solely for historical provenance. The
+dev2 `xval_data` fields are extracted directly into PANcanKFLs' patient-fit
+format.
 
 Outputs beneath `results/` are ignored by Git. Inspect `submissions.tsv`,
 `fit_audit.tsv`, `selection_summary.tsv`, and Slurm accounting for progress.

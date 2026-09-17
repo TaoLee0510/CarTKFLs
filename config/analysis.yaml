@@ -1,11 +1,12 @@
 project_root: /share/lab_crd/taoli/Project/CarTKFLs
 data_root: /share/lab_crd/taoli/Project/CarTKFLs/results
+run_scoped_data_root: true
 handoff_root: /share/lab_crd/CarTData/GSE296419/interim_infercnv/derived/20260917_alfak_handoff_days
 pan_repo: /share/lab_crd/taoli/Project/PANcanKFLs
 pan_commit: 8c189aa038599813870e6c8730b57768e91fd77d
-sif_path: /share/lab_crd/taoli/Docker/cancer_kfl_r44_hpc_amd64_alfakr_dev2_c5db5d8.sif
-sif_sha256: d62e2bffe056f3da0d00ffc03f092deab14c89ceb48c279c62ea51f3be2064dc
-alfakr_commit: c5db5d88d650da1264b6af390969870200e36eab
+sif_path: /share/lab_crd/taoli/Docker/cancer_kfl_r44_hpc_amd64_alfakr_dev2_f93b2d2.sif
+sif_sha256: efadf2160799b8948a2514ffb6d62fa48de974c399b7cd3987809ece0f53a1e9
+alfakr_commit: f93b2d28550d8a39a9cfff22edf53cf4a50c875a
 patients:
   P1: 80
   P4: 221

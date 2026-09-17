@@ -4,7 +4,7 @@ set -euo pipefail
 PROJECT=/share/lab_crd/taoli/Project/CarTKFLs
 PAN_REPO=/share/lab_crd/taoli/Project/PANcanKFLs
 HANDOFF=/share/lab_crd/CarTData/GSE296419/interim_infercnv/derived/20260917_alfak_handoff_days
-SIF_PATH=/share/lab_crd/taoli/Docker/cancer_kfl_r44_hpc_amd64_alfakr_dev2_c5db5d8.sif
+SIF_PATH=/share/lab_crd/taoli/Docker/cancer_kfl_r44_hpc_amd64_alfakr_dev2_f93b2d2.sif
 CONFIG_PATH=${CONFIG_PATH:-${PROJECT}/config/analysis.yaml}
 RUN_STAGE=${RUN_STAGE:-submit}
 QOS=xxlarge
@@ -28,6 +28,7 @@ container_rscript() {
     --bind "/share/lab_crd/taoli/Docker:/share/lab_crd/taoli/Docker:ro" \
     --env "OMP_NUM_THREADS=1" --env "OPENBLAS_NUM_THREADS=1" \
     --env "MKL_NUM_THREADS=1" --env "R_FUTURE_FORK_ENABLE=false" \
+    --env "CART_RUN_DIR=${RUN_DIR:-}" \
     --env "SLURM_JOB_ID=${SLURM_JOB_ID:-}" \
     --env "SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID:-}" \
     --env "SLURM_CPUS_PER_TASK=${SLURM_CPUS_PER_TASK:-1}" \
