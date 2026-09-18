@@ -165,7 +165,7 @@ revision <- data.frame(
   pancankfls_commit = cfg$pan_commit,
   sif_sha256 = cfg$sif_sha256,
   patient_count = nrow(selected_rows),
-  downstream_state = "PENDING",
+  downstream_state_at_selection = "PENDING",
   stringsAsFactors = FALSE
 )
 atomic_tsv(revision, file.path(run_dir, "selection_revision.tsv"))
