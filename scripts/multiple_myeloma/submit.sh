@@ -98,10 +98,12 @@ if [[ -n "${SLURM_JOB_ID:-}" ]]; then
         kfl "${RUN_DIR}/downstream.yaml" "${RUN_DIR}" "${TASK_FILE}"
       ;;
     select)
-      container_rscript "${PAN_REPO}/scripts/hpc/hnsc_melanoma_ovarian_downstream/reduce_worker.R" \
-        select "${RUN_DIR}/downstream.yaml" "${RUN_DIR}"
-      container_rscript "${PROJECT}/scripts/multiple_myeloma/summarize_selection.R" \
+      container_rscript "${PROJECT}/scripts/multiple_myeloma/select_r2_only.R" \
         "${CONFIG_PATH}" "${RUN_DIR}"
+      ;;
+    select_dry_run)
+      container_rscript "${PROJECT}/scripts/multiple_myeloma/select_r2_only.R" \
+        "${CONFIG_PATH}" "${RUN_DIR}" --dry-run
       ;;
     *) echo "Unknown RUN_STAGE=${RUN_STAGE}" >&2; exit 1 ;;
   esac

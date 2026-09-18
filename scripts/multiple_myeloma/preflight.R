@@ -221,6 +221,8 @@ downstream$workflow$alfak_minobs <- minobs
 downstream$workflow$alfak_pm_grid <- list(explicit = as.numeric(cfg$pm_explicit),
                                          sequence = cfg$pm_sequence)
 downstream$workflow$parameter_selection_mode <- "kfl_only"
+downstream$workflow$kfl_selection <- list(mode = "r2_only",
+                                          metric = cfg$selection$r2_metric)
 downstream$workflow$run_expression_annotation <- FALSE
 downstream$workflow$run_survival <- FALSE
 downstream$workflow$run_abm <- FALSE
@@ -240,7 +242,8 @@ provenance <- data.frame(
   value = c(trimws(system2("git", c("-C", cfg$project_root, "rev-parse", "HEAD"),
                             stdout = TRUE)), pan_sha, sif_sha, cfg$alfakr_commit,
             cfg$metadata_path, sha256(cfg$metadata_path), cfg$handoff_root, "day",
-            cfg$month3_nominal_days, "kfl_only", length(pm),
+            cfg$month3_nominal_days,
+            paste0("r2_only:", cfg$selection$r2_metric), length(pm),
             paste(minobs, collapse = ",")), stringsAsFactors = FALSE
 )
 atomic_tsv(provenance, file.path(run_dir, "provenance.tsv"))

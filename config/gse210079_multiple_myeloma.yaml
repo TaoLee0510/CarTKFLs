@@ -4,7 +4,7 @@ run_scoped_data_root: true
 handoff_root: /share/lab_crd/CarTData/Numbat/GSE210079
 metadata_path: /share/lab_crd/CarTData/GSE210079/metadata/sample_metadata.tsv
 pan_repo: /share/lab_crd/taoli/Project/PANcanKFLs
-pan_commit: 8c189aa038599813870e6c8730b57768e91fd77d
+pan_commit: c3cc9601ed46c6d98ca663415ecd5b5e91f030ee
 sif_path: /share/lab_crd/taoli/Docker/cancer_kfl_r44_hpc_amd64_alfakr_dev2_f93b2d2.sif
 sif_sha256: efadf2160799b8948a2514ffb6d62fa48de974c399b7cd3987809ece0f53a1e9
 alfakr_commit: f93b2d28550d8a39a9cfff22edf53cf4a50c875a
@@ -35,6 +35,7 @@ minobs: [5, 10, 20]
 pm_explicit: [0.000005, 0.000010]
 pm_sequence: {start: 0.000050, end: 0.012250, by: 0.000050}
 alfak: {n0: 100000, nb: 10000000, nboot: 500, correct_efflux: true}
+selection: {r2_metric: r2_unweighted}
 hpc:
   qos: xxlarge
   time: '12:00:00'

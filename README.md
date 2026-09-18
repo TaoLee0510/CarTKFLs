@@ -28,14 +28,20 @@ Results are isolated under
 The preflight runs as a Slurm job, verifies the pinned PANcanKFLs commit and
 alfakR dev2 SIF, and builds inputs plus a viable `pm × min_obs` task manifest.
 Fit arrays use `xxlarge`, 12 hours per task, and memory tiers in
-`config/gse210079_multiple_myeloma.yaml`. The fit audit launches PANcanKFLs'
-KFL accuracy/stability selection and compatible downstream jobs. The current
-alfakR `xval.Rds` is extracted directly; there is no rebuild stage.
+`config/gse210079_multiple_myeloma.yaml`. After KFL accuracy/stability metrics
+are computed, the selection stage ranks each patient's viable `pm × min_obs`
+combinations only by the configured R² field. Significance and stability
+metrics remain diagnostics and do not gate or rank candidates. The selected
+tuples feed the compatible PANcanKFLs downstream jobs. The current alfakR
+`xval.Rds` is extracted directly; there is no rebuild stage.
 
 `submissions.tsv`, `fit_audit.tsv`, `fit_sample_summary.tsv`,
 `selection_coverage.tsv`, and Slurm accounting are the progress records.
 Unsupported parameter values, no-CV results, and patients with no evaluable
-fit remain explicit. Failed jobs are never automatically resubmitted.
+fit remain explicit. `selection_coverage.tsv` records the selected R², its
+metric name, and the number of validation points, so weak scores remain
+visible even when a patient has a selected tuple. Failed jobs are never
+automatically resubmitted.
 
 This repository runs the four paired-resection GSE296419 patients (P1, P4,
 P7, P13) through ALFA-K, outcome-blind PM/MINOBS selection, and the compatible
