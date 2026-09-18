@@ -35,7 +35,7 @@ minobs: [5, 10, 20]
 pm_explicit: [0.000005, 0.000010]
 pm_sequence: {start: 0.000050, end: 0.012250, by: 0.000050}
 alfak: {n0: 100000, nb: 10000000, nboot: 500, correct_efflux: true}
-selection: {r2_metric: r2_unweighted}
+selection: {metric: correlation}
 hpc:
   qos: xxlarge
   time: '12:00:00'

@@ -1,16 +1,16 @@
 args <- commandArgs(trailingOnly = TRUE)
 if (!(length(args) %in% c(2L, 3L)) ||
     (length(args) == 3L && args[[3]] != "--dry-run")) {
-  stop("Usage: select_r2_only.R CONFIG RUN_DIR [--dry-run]")
+  stop("Usage: select_correlation_only.R CONFIG RUN_DIR [--dry-run]")
 }
 dry_run <- length(args) == 3L
 script <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[1])
 source(file.path(dirname(normalizePath(script)), "common.R"))
 cfg <- read_config(args[[1]])
 run_dir <- normalizePath(args[[2]], mustWork = TRUE)
-metric <- as.character(cfg$selection$r2_metric)
-if (length(metric) != 1L || !metric %in% c("r2_unweighted", "r_squared", "R2R")) {
-  stop("selection$r2_metric must be r2_unweighted, r_squared, or R2R")
+metric <- as.character(cfg$selection$metric)
+if (!identical(metric, "correlation")) {
+  stop("selection$metric must be correlation (Pearson)")
 }
 downstream <- yaml::read_yaml(file.path(run_dir, "downstream.yaml"))
 analysis_id <- downstream$workflow$analysis_id
@@ -58,40 +58,105 @@ if (!setequal(grid_key(metrics), grid_key(expected_grid))) {
   stop("KFL metric grid differs from the configured combinations")
 }
 
-if (identical(metric, "R2R")) {
-  score <- vapply(seq_len(nrow(metrics)), function(i) {
-    row <- metrics[i, , drop = FALSE]
-    path <- file.path(fit_directory(cfg, row$pm_value, row$min_obs,
-                                    row$PatientID), "xval.Rds")
-    value <- readRDS(path)$R2R
-    if (!is.numeric(value) || length(value) != 1L) {
-      stop("Invalid ALFA-K R2R: ", path)
-    }
-    as.numeric(value)
-  }, numeric(1))
-} else {
-  if (!metric %in% names(metrics)) stop("Missing R2 metric: ", metric)
-  score <- suppressWarnings(as.numeric(metrics[[metric]]))
+needed_metrics <- c("correlation", "p_value", "r2_unweighted", "sig_flag",
+                    "huber_perm_p", "huber_slope", "intercept_rel",
+                    "outlier_ratio", "bias_score", "sd_score", "post_score")
+if (!all(needed_metrics %in% names(metrics))) {
+  stop("KFL metrics lack Pearson or strict-selection diagnostic fields")
 }
-metrics$selection_r2 <- score
-metrics$selection_r2_metric <- metric
+if (anyNA(metrics$sig_flag)) stop("KFL significance flags contain NA")
+metrics$selection_pearson <- suppressWarnings(as.numeric(metrics$correlation))
+metrics$selection_method <- "max_finite_pearson_correlation"
+
+# Reconstruct the pinned PANcanKFLs selection in scratch space so the report
+# compares against that exact implementation without changing prior outputs.
+source(file.path(cfg$pan_repo, "code/packages/kflInfer/parameters_optimize.R"))
+reconstruct_strict <- function() {
+  scratch <- tempfile("myeloma_strict_selection_")
+  dir.create(scratch)
+  on.exit(unlink(scratch, recursive = TRUE), add = TRUE)
+  strict_cfg <- downstream
+  strict_cfg$Data_path <- scratch
+  strict <- KFLAccuracyStabilityOpt(
+    stats::setNames(list(list(all_results = metrics)), cfg$cancer_type),
+    config = strict_cfg, out_subdir = "OptimizedParameters"
+  )
+  strict[[cfg$cancer_type]]$best_results
+}
+strict_best <- reconstruct_strict()
+if (!is.data.frame(strict_best) || nrow(strict_best) != 1L ||
+    strict_best$PatientID != "P32" ||
+    strict_best$pm_label != "pm_0.0001" || strict_best$min_obs != 20L) {
+  stop("Original PANcanKFLs selection changed; review the method report")
+}
 
 best <- do.call(rbind, lapply(patients, function(patient) {
-  rows <- metrics[metrics$PatientID == patient & is.finite(metrics$selection_r2),
+  rows <- metrics[metrics$PatientID == patient & is.finite(metrics$selection_pearson),
                   , drop = FALSE]
-  if (!nrow(rows)) stop("No finite ", metric, " candidate for ", patient)
-  # Only R2 determines the ranking. The remaining keys resolve exact ties.
-  order_idx <- order(-rows$selection_r2, rows$pm_value, -rows$min_obs)
-  rows[order_idx[1L], , drop = FALSE]
+  if (!nrow(rows)) stop("No finite Pearson correlation for ", patient)
+  # Only Pearson r determines the ranking. The other keys resolve exact ties.
+  order_idx <- order(-rows$selection_pearson, rows$pm_value, rows$min_obs,
+                     rows$pm_label)
+  winner <- rows[order_idx[1L], , drop = FALSE]
+  fit_path <- flat_fit_path(fit_directory(
+    cfg, winner$pm_value, winner$min_obs, patient
+  ), patient)
+  if (!file.exists(fit_path) || file.info(fit_path)$size <= 0L) {
+    stop("Selected ALFA-K fit is missing: ", fit_path)
+  }
+  winner
 }))
 row.names(best) <- NULL
 if (!identical(as.character(best$PatientID), patients)) {
-  stop("R2 selection did not retain P16, P32, and P33")
+  stop("Pearson selection did not retain P16, P32, and P33")
+}
+if (any(best$sig_flag %in% TRUE)) {
+  stop("A Pearson winner now passes the original rule; review method report")
+}
+comparison <- do.call(rbind, lapply(patients, function(patient) {
+  winner <- best[best$PatientID == patient, , drop = FALSE]
+  original <- strict_best[strict_best$PatientID == patient, , drop = FALSE]
+  data.frame(
+    cancer_type = cfg$cancer_type, PatientID = patient,
+    completed_fits = as.integer(manifest$complete_raw[match(patient, manifest$PatientID)]),
+    original_significant_candidates = sum(metrics$sig_flag[metrics$PatientID == patient] %in% TRUE),
+    original_selected = nrow(original) == 1L,
+    original_pm_label = if (nrow(original)) as.character(original$pm_label) else "",
+    original_min_obs = if (nrow(original)) as.integer(original$min_obs) else NA_integer_,
+    pearson_pm_label = as.character(winner$pm_label),
+    pearson_min_obs = as.integer(winner$min_obs),
+    pearson_r = as.numeric(winner$selection_pearson),
+    pearson_p = as.numeric(winner$p_value),
+    cv_points = as.integer(winner$total_points),
+    predictive_r2 = as.numeric(winner$r2_unweighted),
+    original_rule_passed = as.logical(winner$sig_flag),
+    permutation_p = as.numeric(winner$huber_perm_p),
+    huber_slope = as.numeric(winner$huber_slope),
+    intercept_rel = as.numeric(winner$intercept_rel),
+    outlier_ratio = as.numeric(winner$outlier_ratio),
+    bias_score = as.numeric(winner$bias_score),
+    stringsAsFactors = FALSE
+  )
+}))
+if (!identical(as.integer(comparison$original_significant_candidates),
+               c(0L, 6L, 0L))) {
+  stop("Original significant-candidate counts changed; review method report")
 }
 if (dry_run) {
-  print(best[, c("PatientID", "pm_label", "min_obs", "selection_r2",
-                 "total_points"), drop = FALSE], row.names = FALSE)
+  print(best[, c("PatientID", "pm_label", "min_obs", "selection_pearson",
+                 "r2_unweighted", "total_points", "sig_flag"), drop = FALSE],
+        row.names = FALSE)
   quit(save = "no", status = 0L)
+}
+
+downstream$workflow$kfl_selection <- list(
+  mode = "correlation_only", metric = "pearson",
+  ranking = "max_finite_correlation"
+)
+config_tmp <- tempfile(".downstream_", tmpdir = run_dir)
+yaml::write_yaml(downstream, config_tmp)
+if (!file.rename(config_tmp, file.path(run_dir, "downstream.yaml"))) {
+  stop("Cannot install Pearson downstream configuration")
 }
 
 cohort_subdir <- file.path("OptimizedParameters", analysis_id)
@@ -109,7 +174,6 @@ atomic_csv <- function(value, path) {
 }
 selected <- stats::setNames(list(list(all_results = metrics, best_results = best)),
                             cfg$cancer_type)
-source(file.path(cfg$pan_repo, "code/packages/kflInfer/parameters_optimize.R"))
 final <- parameters_optimize(config = downstream, kfl_results = selected,
                              out_subdir = cohort_subdir, selection_mode = "kfl_only")
 selected_rows <- data.frame(cancer_type = cfg$cancer_type,
@@ -132,15 +196,14 @@ coverage <- data.frame(
   cancer_type = cfg$cancer_type,
   PatientID = patients,
   complete_fits = as.integer(manifest$complete_raw[match(patients, manifest$PatientID)]),
-  finite_r2_candidates = vapply(patients, function(patient) {
-    sum(metrics$PatientID == patient & is.finite(metrics$selection_r2))
+  finite_correlation_candidates = vapply(patients, function(patient) {
+    sum(metrics$PatientID == patient & is.finite(metrics$selection_pearson))
   }, integer(1)),
-  significant_candidates_diagnostic = vapply(patients, function(patient) {
-    sum(metrics$sig_flag[metrics$PatientID == patient] %in% TRUE)
-  }, integer(1)),
-  selection_status = "SELECTED_R2_ONLY",
-  r2_metric = metric,
-  best_r2 = best$selection_r2,
+  significant_candidates_diagnostic = comparison$original_significant_candidates,
+  selection_status = "SELECTED_PEARSON_ONLY",
+  selection_metric = "pearson_correlation",
+  best_correlation = best$selection_pearson,
+  predictive_r2_diagnostic = best$r2_unweighted,
   total_points = as.integer(best$total_points),
   pm_label = best$pm_label,
   min_obs = as.integer(best$min_obs),
@@ -153,12 +216,19 @@ selected_rows$time_end_day <- vapply(selected_rows$PatientID, function(patient) 
 selected_rows$time_unit <- "day"
 atomic_tsv(coverage, file.path(run_dir, "selection_coverage.tsv"))
 atomic_tsv(coverage[FALSE, , drop = FALSE], file.path(run_dir, "selection_exclusions.tsv"))
+atomic_tsv(comparison, file.path(run_dir, "selection_comparison.tsv"))
 atomic_tsv(selected_rows, file.path(run_dir, "selection_summary.tsv"))
 atomic_tsv(selected_rows[, c("cancer_type", "PatientID", "pm_label", "min_obs")],
            file.path(run_dir, "manifests", "selected_samples.tsv"))
+note_source <- file.path(cfg$project_root, "GSE210079_SELECTION_METHOD.md")
+note_tmp <- tempfile(".SELECTION_METHOD_", tmpdir = run_dir)
+if (!file.copy(note_source, note_tmp, overwrite = TRUE) ||
+    !file.rename(note_tmp, file.path(run_dir, "SELECTION_METHOD.md"))) {
+  stop("Cannot install the selection method note")
+}
 revision <- data.frame(
   selected_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
-  selection_mode = "r2_only", r2_metric = metric,
+  selection_mode = "correlation_only", selection_metric = "pearson",
   cartkfls_commit = trimws(system2(
     "git", c("-C", cfg$project_root, "rev-parse", "HEAD"), stdout = TRUE
   )),
@@ -169,5 +239,5 @@ revision <- data.frame(
   stringsAsFactors = FALSE
 )
 atomic_tsv(revision, file.path(run_dir, "selection_revision.tsv"))
-cat(sprintf("R2-only selection (%s): %d patients selected.\n", metric,
-            nrow(selected_rows)))
+cat(sprintf("Pearson-only selection: %d patients selected; strict rule selected %d.\n",
+            nrow(selected_rows), nrow(strict_best)))
