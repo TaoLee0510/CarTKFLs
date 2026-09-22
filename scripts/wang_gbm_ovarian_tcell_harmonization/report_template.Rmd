@@ -1,0 +1,142 @@
+---
+title: "Wang GBM–Ovarian T-cell harmonization"
+subtitle: "Technical analysis report"
+date: "`r format(Sys.time(), '%Y-%m-%d %H:%M %Z')`"
+output:
+  html_document:
+    self_contained: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(data.table)
+library(knitr)
+run_dir <- Sys.getenv("CARTKFLS_RUN_DIR")
+script_dir <- Sys.getenv("CARTKFLS_SCRIPT_DIR")
+read_tab <- function(...) fread(file.path(run_dir, ...), na.strings = "NA")
+embed_png <- function(path, alt_text) {
+  if (!file.exists(path)) stop("Report image not found: ", path)
+  uri <- knitr::image_uri(path)
+  cat(sprintf(
+    '<figure><img src="%s" alt="%s" style="max-width:100%%;height:auto;"><figcaption>%s</figcaption></figure>',
+    uri, alt_text, alt_text
+  ))
+}
+patient <- read_tab("sample_summaries", "harmonized_patient_summary.tsv")
+counts <- read_tab("qc_tables", "harmonized_annotation_counts.tsv")
+coverage <- rbindlist(list(
+  read_tab("qc_tables", "GBM_signature_gene_coverage.tsv"),
+  read_tab("qc_tables", "Ovarian_signature_gene_coverage.tsv")
+))
+validation <- read_tab("qc_tables", "harmonization_validation.tsv")
+primary <- read_tab("association_results", "primary_total_t_associations.tsv")
+cross <- read_tab("association_results", "cross_cancer_direction_comparison.tsv")
+adjust <- read_tab("association_results", "one_feature_adjustment_models.tsv")
+markers <- fread(file.path(script_dir, "marker_programs.tsv"))
+```
+
+# Answer first
+
+This analysis places both datasets in a common T/NK framework while retaining the approved ovarian identities. T-cell subtype is represented as **CD8**, **conventional CD4**, **regulatory T**, or **unresolved T**; **NK remains a separate lineage**. Six non-exclusive biological programs—cytotoxicity, activation, naive/memory, exhaustion/dysfunction, interferon response, and stress—are retained as continuous UCell scores for every T/NK candidate cell.
+
+The chromosome-fitness comparisons are exploratory cross-patient analyses. They test whether the association with total T-cell fraction changes after adding one composition or state feature at a time. They do not establish mediation or causality, and the small number of patients makes effect size and cross-dataset direction more informative than isolated nominal p-values.
+
+# Data and annotation scope
+
+```{r data-summary}
+summary_table <- patient[, .(
+  patients = uniqueN(patient_id),
+  total_cells = sum(n_all_cells),
+  T_cells = sum(n_t_cells),
+  NK_cells = sum(n_nk_cells),
+  median_T_fraction = median(total_t_fraction_all_cells, na.rm = TRUE)
+), by = dataset]
+kable(summary_table, digits = 4)
+```
+
+The ovarian subtype labels are mapped from the approved hierarchical annotations. GBM T/NK candidates are re-normalized and re-clustered within the T-cell compartment, with patient-aware Harmony integration when available. Cluster median lineage/subtype scores are then assigned against robust ovarian reference centroids. Clusters failing distance, lineage, margin, or minimum-size rules are labeled unresolved, with the reason retained per cell.
+
+# Marker programs and scoring
+
+```{r markers}
+kable(markers[, .(signature, level, label, genes, citation, pmid, doi)], longtable = FALSE)
+```
+
+UCell rank scoring uses normalized RNA expression with `maxRank = 1500`. Raw UCell scores are the continuous analysis variables. Dataset-specific robust z-scores and primary-state labels are secondary browsing aids; they do not replace the continuous values.
+
+```{r coverage}
+kable(coverage[, .(dataset, signature, n_requested, n_observed, coverage_fraction)], digits = 3)
+```
+
+# Annotation and QC
+
+```{r validation}
+kable(validation)
+```
+
+```{r counts}
+kable(counts[order(dataset, harmonized_lineage, harmonized_tcell_subtype, -N)])
+```
+
+```{r subtype-figure, results='asis'}
+embed_png(file.path(run_dir, "figures", "subtype_composition_by_patient.png"), "Subtype composition by patient")
+```
+
+```{r program-figure, results='asis'}
+embed_png(file.path(run_dir, "figures", "program_scores_by_patient.png"), "Continuous program scores by patient")
+```
+
+```{r gbm-umap-figure, results='asis'}
+embed_png(file.path(run_dir, "figures", "GBM_tcell_subtype_umap.png"), "GBM T/NK reclustering and subtype assignments")
+```
+
+# Chromosome-fitness association analysis
+
+For each selected patient ALFA-K landscape, frequent karyotypes are used to estimate three chromosome-level summaries: the marginal fitness slope per copy, a standardized linear effect, and a within-landscape Spearman correlation. Each summary is then correlated across patients with total T-cell fraction, T-cell subtype proportions, and mean continuous program scores. Ovarian split rows for `EOC153_omentum_1/2` are excluded from the primary patient-level analysis to avoid pseudo-replication; the combined `EOC153` row is retained.
+
+```{r primary-results}
+show_primary <- head(primary[order(p_value)], 30)
+kable(show_primary, digits = 4)
+```
+
+```{r association-figure, results='asis'}
+embed_png(file.path(run_dir, "figures", "chromosome_fitness_feature_associations.png"), "Chromosome-fitness associations with T-cell composition and state")
+```
+
+## Cross-cancer direction checks
+
+```{r opposite}
+if ("opposite_direction" %in% colnames(cross)) {
+  show_cross <- head(cross[opposite_direction %in% TRUE], 40)
+  if (nrow(show_cross)) kable(show_cross, digits = 3) else cat("No estimable cross-cancer associations had opposite signs.\n")
+} else {
+  cat("A complete two-dataset comparison was not estimable.\n")
+}
+```
+
+## One-feature adjustment screens
+
+Each model standardizes the chromosome effect, total T-cell fraction, and one added composition/state feature. Because the design has few patients and compositional predictors are dependent, features are added one at a time rather than combined into an overfit multivariable model.
+Nominal p-values and Benjamini-Hochberg FDR values are both reported; the FDR family is defined within each cancer dataset and chromosome-effect metric across all tested chromosomes and added features.
+
+```{r adjustments}
+if (nrow(adjust)) {
+  show_adjust <- head(adjust[order(-total_t_beta_attenuation_fraction, -delta_r_squared)], 40)
+  kable(show_adjust, digits = 4)
+}
+```
+
+# Interpretation limits
+
+- GBM has a much smaller T-cell compartment than ovarian cancer; unresolved assignments are deliberately retained rather than forced.
+- Program scores can co-occur. A primary state is only a convenience label and should not be treated as mutually exclusive biology.
+- Cross-patient sample sizes are small, many chromosome-feature comparisons are tested, and patient-level observations are not evidence of cell-level causality.
+- The landscape-derived chromosome summaries are operational marginal effects from the selected ALFA-K landscapes, not direct experimental chromosome perturbations.
+- The one-feature adjustment screen identifies attenuation or strengthening consistent with composition/state dependence; it does not prove formal mediation.
+
+# Reproducibility and files
+
+The run directory contains harmonized Seurat objects, compressed cell metadata, patient/sample summaries, marker and gene-coverage documentation, QC tables, association tables, figures, execution logs, source-code checksums, input/container provenance, and completion sentinels. See `provenance/run_manifest.tsv` for an inventory.

@@ -1,0 +1,39 @@
+analysis_name: wang_gbm_ovarian_tcell_harmonization
+analysis_version: "2026-09-21"
+seed: 20260921
+
+inputs:
+  GBM: /share/lab_crd/taoli/Project/PANcanKFLs/Results/results/Annotation/GBM/GBM_annotated.Rds
+  Ovarian: /share/lab_crd/taoli/Project/PANcanKFLs/Results/results/Annotation/Ovarian/Ovarian_annotated.Rds
+
+output_root: /share/lab_crd/taoli/Project/CarTKFLs/results/wang_gbm_ovarian_tcell_harmonization
+sif_path: /share/lab_crd/taoli/Docker/gemcitabine-model_full.sif
+required_hostname: hpctpa3pc0028
+
+runtime:
+  r_library_relpath: runtime_library
+  workers: 8
+  ucell_version: "2.12.0"
+  ucell_max_rank: 1500
+
+annotation:
+  assay_preference: [RNA, SCT]
+  gbm_recluster_resolution: 0.4
+  gbm_recluster_dims: 20
+  score_margin_moderate: 0.01
+  score_margin_high: 0.02
+  centroid_relative_margin_moderate: 0.10
+  centroid_relative_margin_high: 0.25
+  centroid_radius_multiplier: 1.25
+  minimum_cluster_cells: 20
+  minimum_signature_coverage_fraction: 0.60
+  minimum_signature_genes: 3
+  state_z_support: 1.0
+  state_z_margin: 0.5
+
+fitness:
+  best_parameter_root: /share/lab_crd/taoli/Project/PANcanKFLs/Results/results/OptimizedParameters
+  landscape_root: /share/lab_crd/taoli/Project/PANcanKFLs/Results/data/processed/ALFA_K
+  chromosomes: 22
+  minimum_unique_copy_numbers: 2
+  minimum_frequent_karyotypes: 5
